@@ -19,6 +19,8 @@ define("debug", default=False,
        help="run in debug mode", type=bool)
 define("inspect_timeout", default=1000, type=float,
        help="inspect timeout (in milliseconds)")
+define("skip_methods", default='', type=str,
+       help="skip inspect methods (scheduled,revoked,etc)")
 define("auth", default='', type=str,
        help="regexp of emails to grant access")
 define("basic_auth", type=str, default=None, multiple=True,

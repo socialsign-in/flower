@@ -31,10 +31,14 @@ class ControlHandler(BaseHandler):
         futures = []
         destination = [workername] if workername else None
         timeout = app.options.inspect_timeout / 1000.0
+        skip_methods = [mth.strip() for mth in app.options.skip_methods.split(",")]
         inspect = app.capp.control.inspect(
-            timeout=timeout, destination=destination)
+            timeout=timeout, destination=destination )
         for method in cls.INSPECT_METHODS:
-            futures.append(app.delay(getattr(inspect, method)))
+            if skip_methods and method in skip_methods: 
+                logger.debug("Skipping retrieval of method %s" % method)
+            else:
+                futures.append(app.delay(getattr(inspect, method)))
 
         results = yield futures
 
