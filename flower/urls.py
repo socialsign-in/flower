@@ -13,6 +13,7 @@ from .views import monitor
 from .views.broker import BrokerView
 from .views.workers import WorkerView
 from .views.tasks import TaskView, TasksView, TasksDataTable
+from .views.failures import FailuresView
 from .views.error import NotFoundErrorHandler
 from .views.dashboard import DashboardView, DashboardUpdateHandler
 from .utils import gen_cookie_secret
@@ -36,6 +37,7 @@ handlers = [
     url(r"/tasks", TasksView, name='tasks'),
     url(r"/tasks/datatable", TasksDataTable),
     url(r"/broker", BrokerView, name='broker'),
+    url(r"/failures", FailuresView, name='failures'),
     # Worker API
     (r"/api/workers", workers.ListWorkers),
     (r"/api/worker/shutdown/(.+)", control.WorkerShutDown),

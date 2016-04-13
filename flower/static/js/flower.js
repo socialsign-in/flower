@@ -742,7 +742,7 @@ var flower = (function () {
     });
 
     $(document).ready(function () {
-        if ($.inArray($(location).attr('pathname'), [url_prefix() + '/', url_prefix() + '/dashboard', url_prefix() + '/broker', url_prefix() + '/monitor']) !== -1) {
+        if ($.inArray($(location).attr('pathname'), [url_prefix() + '/', url_prefix() + '/dashboard', url_prefix() + '/broker', url_prefix() + '/monitor', url_prefix() + '/failures']) !== -1) {
             return;
         }
 
