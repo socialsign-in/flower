@@ -13,6 +13,7 @@ from tornado import web
 
 from ..views import BaseHandler
 from ..utils.tasks import iter_tasks, get_task_by_id, as_dict
+import time
 
 
 from redis import Redis 
@@ -47,16 +48,14 @@ class FailuresView(BaseHandler):
         app = self.application
         capp = self.application.capp
 
-        time = 'natural-time' if app.options.natural_time else 'time'
-        if capp.conf.CELERY_TIMEZONE:
-            time += '-' + capp.conf.CELERY_TIMEZONE
 
-        
+        now = int(time.time()) 
+
         redis = Redis()
         conn = Redis(settings.REDIS_HOST, settings.REDIS_PORT, settings.REDIS_GLOBAL_DB)
-        all_fails = conn.zrevrange('task-fails-alltasks',0,-1)
+        all_fails = conn.zrevrange('task-fails-task-alltasks',0,-1,withscores=True)
         tasks = []
-        for fail_json in all_fails:
+        for fail_json,ts in all_fails:
             dt = simplejson.loads(fail_json)
             desc = dt['desc']
             task = {
@@ -67,6 +66,8 @@ class FailuresView(BaseHandler):
                 'kwargs': desc['kwargs'],
                 'args': desc['args'],
                 'retries': desc['retries'],
+                'timestamp': ts,
+                'ago': now - ts,
             }
             tasks.append((dt['task_id'],FailObject(task)))
         
