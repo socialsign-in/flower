@@ -35,6 +35,8 @@ class FailObject():
             'exception',
             'timestamp',
             'worker',
+            'timestamp',
+            'ago',
           ]:
             setattr(self,k,None)
     
@@ -53,9 +55,9 @@ class FailuresView(BaseHandler):
 
         redis = Redis()
         conn = Redis(settings.REDIS_HOST, settings.REDIS_PORT, settings.REDIS_GLOBAL_DB)
-        all_fails = conn.zrevrange('task-fails-task-alltasks',0,-1,withscores=True)
+        all_fails = conn.zrevrange('task-fails-task-alltasks',0,-1, withscores=True)
         tasks = []
-        for fail_json,ts in all_fails:
+        for fail_json, ts in all_fails:
             dt = simplejson.loads(fail_json)
             desc = dt['desc']
             task = {
@@ -63,12 +65,21 @@ class FailuresView(BaseHandler):
                 'uuid': dt['task_id'],
                 'state': 'FAILURE',
                 'exception': desc['exception'],
-                'kwargs': desc['kwargs'],
-                'args': desc['args'],
-                'retries': desc['retries'],
+                'kwargs': desc.get('kwargs'),
+                'args': desc.get('args'),
+                'retries': desc.get('retries'),
                 'timestamp': ts,
-                'ago': now - ts,
+                'ago': now - ts, 
             }
+            if 'event' in dt:
+                event = conn.zrevrangebyscore(dt.get('event'),0,ts)
+                logger.debug(event)
+                if event:
+                    event = simplejson.loads(event[0]) 
+                    task['worker'] = event.get('hostname')
+                    if event.get('type') == 'task-retried':
+                        task['state'] = 'RETRY'
+
             tasks.append((dt['task_id'],FailObject(task)))
         
         logger.debug(tasks)

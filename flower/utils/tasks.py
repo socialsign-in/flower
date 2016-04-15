@@ -6,6 +6,52 @@ import time
 from .search import satisfies_search_terms, parse_search_terms
 
 from celery.events.state import Task
+from celery.result import AsyncResult
+
+
+"""
+['result', 'uuid', 'clock', 'exchange', 'routing_key', 'failed', 'state', 'client', 'kwargs', 'sent', 'expires', 'retries', 'started', 'timestamp', 'args', 'worker', 'name', 'received', 'exception', 'revoked', 'succeeded', 'traceback', 'eta', 'retried', 'runtime']
+"""
+
+class BackendTaskObject():
+
+    def __init__(self,task,event,state): 
+
+        self._fields = Task._defaults.keys()
+        for k in self._fields:
+            setattr(self,k,None)
+    
+        if isinstance(task,AsyncResult):
+            self.uuid = task.id
+            self.result = task.result
+            self.traceback = task.traceback 
+            self.state = task.status
+           
+            if event:
+                worker_host = event.get('hostname')
+                self.name = event.get('task_name')
+                self.worker = state.workers.get(worker_host) 
+                self.exception = event.get('exception')
+                self.clock = event.get('clock')
+                self.timestamp = event.get('timestamp')
+                self.args = event.get('args','N/A') 
+                self.kwargs = event.get('kwargs','N/A') 
+                self.retries = event.get('retries')
+
+                if task.failed(): 
+                    self.failed = event.get('timestamp')
+                if task.successful(): 
+                    self.succeeded = event.get('timestamp')
+                    
+
+                self.received = event.get('local_received')
+     
+                
+        else:
+            for k,v in task.iteritems():
+                setattr(self,k,v)
+
+
 
 
 def iter_tasks(events, limit=None, type=None, worker=None, state=None,
@@ -73,6 +119,15 @@ def get_task_by_id(events, task_id):
             task._fields = _fields
         return task
 
+def get_task_from_backend(events, backend, task_id, event=None):
+    _fields = Task._defaults.keys()
+    task = AsyncResult(task_id,backend=backend)
+    if task is not None:
+        task = BackendTaskObject(task,event,events.state)
+
+    return task
+
+
 
 def as_dict(task):
     # as_dict is new in Celery 3.1.7
@@ -81,3 +136,4 @@ def as_dict(task):
     # old version
     else:
         return task.info(fields=task._defaults.keys())
+

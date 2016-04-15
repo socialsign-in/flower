@@ -12,15 +12,29 @@ except ImportError:
 from tornado import web
 
 from ..views import BaseHandler
-from ..utils.tasks import iter_tasks, get_task_by_id, as_dict
+from ..utils.tasks import iter_tasks, get_task_by_id, as_dict, get_task_from_backend
+
+from redis import Redis 
+from django.conf import settings
+import simplejson
 
 logger = logging.getLogger(__name__)
 
-
+"""
+Fallback to Backend if not in events
+"""
 class TaskView(BaseHandler):
     @web.authenticated
     def get(self, task_id):
         task = get_task_by_id(self.application.events, task_id)
+
+        if task is None:
+            redis = Redis()
+            conn = Redis(settings.REDIS_HOST, settings.REDIS_PORT, settings.REDIS_GLOBAL_DB)
+            task_event = conn.zrevrange('task-event-%s' % task_id,0,1)
+            if task_event:
+                task_event = simplejson.loads(task_event[0])  
+            task = get_task_from_backend(self.application.events, self.capp.backend,task_id,event=task_event) 
 
         if task is None:
             raise web.HTTPError(404, "Unknown task '%s'" % task_id)
